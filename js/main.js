@@ -5,28 +5,60 @@ $(document).ready(function () {
   var optionResults = "";
   var categories = [];
 
-  $.get(_url, function (data) {
-    $.each(data, function (key, items) {
-      _cat = items.scientific_name;
+  function renderPage(data) {
+    $.get(_url, function (data) {
+      $.each(data, function (key, items) {
+        _cat = items.scientific_name;
 
-      dataResults +=
-        "<div>" +
-        "<h3>" +
-        items.common_name +
-        "</h3>" +
-        "<p>" +
-        items.scientific_name +
-        "</p>";
-      ("</div>");
+        dataResults +=
+          "<div>" +
+          "<h3>" +
+          items.common_name +
+          "</h3>" +
+          "<p>" +
+          items.scientific_name +
+          "</p>";
+        ("</div>");
 
-      if ($.inArray(_cat, categories) == -1) {
-        categories.push(_cat);
-        optionResults += "<option value='" + _cat + "'>" + _cat + "</option>";
-      }
+        if ($.inArray(_cat, categories) == -1) {
+          categories.push(_cat);
+          optionResults += "<option value='" + _cat + "'>" + _cat + "</option>";
+        }
+      });
+      $("#animals").html(dataResults);
+      $("#cat_select").html(
+        "<option value='all'>semua</option>" + optionResults
+      );
     });
-    $("#animals").html(dataResults);
-    $("#cat_select").html("<option value='all'>semua</option>" + optionResults);
-  });
+  }
+
+  var networkDataReceived = false;
+
+  // fresh data from online
+  var networkUpdate = fetch(_url)
+    .then(function (response) {
+      return response.json();
+    })
+    .then(function (data) {
+      networkDataReceived = true;
+      renderPage(data);
+    });
+
+  // return data from cache
+  caches
+    .match(_url)
+    .then(function (response) {
+      if (!response) throw Error("no data on cache");
+      return response.json();
+    })
+    .then(function (data) {
+      if (!networkDataReceived) {
+        renderPage(data);
+      }
+    })
+    .catch(function () {
+      return networkUpdate;
+    });
 
   $("#cat_select").on("change", function () {
     updateAnimal($(this).val());
